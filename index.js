@@ -22,8 +22,8 @@ const initializeDbAndServer = async () => {
       driver: sqlite3.Database,
     });
 
-    app.listen(3010, () =>
-      console.log("Server Running at http://localhost:3010/")
+    app.listen(3019, () =>
+      console.log("Server Running at http://localhost:3019/")
     );
   } catch (error) {
     console.log(`DB Error: ${error.message}`);
@@ -40,6 +40,7 @@ function authenticateToken(request, response, next) {
   if (authHeader !== undefined) {
     jwtToken = authHeader.split(" ")[1];
   }
+
   if (jwtToken === undefined) {
     response.status(401);
     response.send("Invalid JWT Token");
@@ -95,8 +96,7 @@ app.post("/login", async (request, response) => {
         username: username,
       };
       const jwtToken = jwt.sign(payload, "MY_SECRET_TOKEN");
-      console.log(jwtToken);
-      response.send({ jwtToken });
+      response.send({ jwt_token: jwtToken });
     } else {
       response.status(400);
       response.send("Invalid password");
@@ -107,7 +107,7 @@ app.post("/login", async (request, response) => {
 module.exports = app;
 
 // API route to get home videos
-app.get("/", authenticateToken, async (request, response) => {
+app.get("/all", authenticateToken, async (request, response) => {
   const { search = "" } = request.query;
   const homeSqlQuery = `SELECT * FROM home_videos WHERE title LIKE '%${search}%';`;
   const homeVideos = await database.all(homeSqlQuery);
@@ -123,11 +123,11 @@ app.get("/", authenticateToken, async (request, response) => {
     },
   }));
 
-  response.send(data);
+  response.send({ videos: data });
 });
 
 // API route to get trending videos
-app.get("/trending", authenticateToken, async (req, res) => {
+app.get("/trending", authenticateToken, async (request, response) => {
   const trendingSqlQuery = `SELECT * FROM trending_videos`;
   const trendingVideos = await database.all(trendingSqlQuery);
   const data = trendingVideos.map((eachVideo) => ({
@@ -141,12 +141,34 @@ app.get("/trending", authenticateToken, async (req, res) => {
       profile_image_url: eachVideo.channel_profile_image_url,
     },
   }));
-  response.send(data);
+  response.send({ videos: data });
 });
 
 // API route to get gaming videos
-app.get("/gaming", authenticateToken, async (req, res) => {
+app.get("/gaming", authenticateToken, async (request, response) => {
   const gamingSqlQuery = `SELECT * FROM gaming_videos`;
   const gamingVideos = await database.all(gamingSqlQuery);
-  response.send(gamingVideos);
+  response.send({ videos: gamingVideos });
+});
+
+app.get("/videos/:id", authenticateToken, async (request, response) => {
+  const { id } = request.params;
+  const videoSQLQuery = `SELECT 'home_videos' AS video_type, id, title, view_count, published_at, thumbnail_url, channel_name AS channel, channel_profile_image_url AS profile_image_url
+FROM home_videos
+WHERE id = '${id}'
+
+UNION ALL
+
+SELECT 'trending_videos' AS video_type, id, title, view_count, published_at, thumbnail_url, channel_name AS channel, channel_profile_image_url AS profile_image_url
+FROM trending_videos
+WHERE id = '${id}'
+
+UNION ALL
+
+SELECT 'gaming_videos' AS video_type, id, title, view_count, published_at, thumbnail_url, channel_name AS channel, channel_profile_image_url AS profile_image_url
+FROM gaming_videos
+WHERE id = '${id}';
+`;
+  const videoDetails = await database.get(videoSQLQuery);
+  response.send({ video_details: videoDetails });
 });
