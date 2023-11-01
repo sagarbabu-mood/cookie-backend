@@ -26,3 +26,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InNhZ
 ###
 GET http://localhost:3010/gaming
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InNhZ2FyIiwiaWF0IjoxNjk4NzMzNDQyfQ.DzuK3pdmA7sgFbLqlMGTC8yzdOQrcmLpltw9yw7HgJ4
+
+###
+GET http://localhost:3019/videos/8c294ff4-1ff1-493f-b703-a60d6044e19c
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InNhZ2FyIiwiaWF0IjoxNjk4NzMzNDQyfQ.DzuK3pdmA7sgFbLqlMGTC8yzdOQrcmLpltw9yw7HgJ4

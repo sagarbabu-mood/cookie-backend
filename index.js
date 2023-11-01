@@ -153,22 +153,23 @@ app.get("/gaming", authenticateToken, async (request, response) => {
 
 app.get("/videos/:id", authenticateToken, async (request, response) => {
   const { id } = request.params;
-  const videoSQLQuery = `SELECT 'home_videos' AS video_type, id, title, view_count, published_at, thumbnail_url, channel_name AS channel, channel_profile_image_url AS profile_image_url
-FROM home_videos
-WHERE id = '${id}'
-
-UNION ALL
-
-SELECT 'trending_videos' AS video_type, id, title, view_count, published_at, thumbnail_url, channel_name AS channel, channel_profile_image_url AS profile_image_url
-FROM trending_videos
-WHERE id = '${id}'
-
-UNION ALL
-
-SELECT 'gaming_videos' AS video_type, id, title, view_count, published_at, thumbnail_url, channel_name AS channel, channel_profile_image_url AS profile_image_url
-FROM gaming_videos
-WHERE id = '${id}';
-`;
+  const videoSQLQuery = `select * from video_details where id = '${id}';`
   const videoDetails = await database.get(videoSQLQuery);
-  response.send({ video_details: videoDetails });
+  const data = {
+    id: videoDetails.id,
+    title: videoDetails.title,
+    video_url: videoDetails.video_url,
+    thumbnail_url: videoDetails.thumbnail_url,
+    channel: {
+      name: videoDetails.channel_name,
+      profile_image_url: videoDetails.profile_image_url,
+      subscriber_count: videoDetails.subscriber_count
+    },
+    view_count: videoDetails.view_count,
+    published_at: videoDetails.published_at,
+    description: videoDetails.description
+  };
+
+  response.send({ video_details: data });
 });
+
