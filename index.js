@@ -46,9 +46,11 @@ function generateSessionId() {
 
 function saveSessionId(username, sessionId) {
   sessionStore[username] = sessionId;
+  console.log(sessionStore, username, sessionId, "savinggggg.")
 }
 
 function checkSessionId(username, sessionId) {
+  console.log(sessionStore, "sgaga")
   return sessionStore[username] === sessionId;
 }
 
@@ -67,6 +69,7 @@ function authenticateToken(request, response, next) {
     }
 
     const isValidSession = checkSessionId(payload.username, sessionId);
+    console.log(isValidSession)
     if (!isValidSession) {
       return response.status(401).send("Invalid session");
     }
@@ -78,17 +81,17 @@ function authenticateToken(request, response, next) {
 
 const activeSessions = {}; // This should be replaced with a real session store
 
-
 const authenticate = (req, res, next) => {
-  const sessionId = req.headers['session-id'];
+  const sessionId = req.cookies.session_id;
 
-  if (!sessionId || !activeSessions[sessionId]) {
+  if (!sessionId || !checkSessionId(req.user.username, sessionId)) {
     return res.status(401).json({ error: 'Invalid session' }); // Unauthorized
   }
 
-  req.user = activeSessions[sessionId]; // Attach user data to the request
+  req.user = req.cookies.jwt_token; // Attach user data to the request
   next();
 };
+
 
 // Register user
 app.post("/register", async (request, response) => {
@@ -137,6 +140,7 @@ app.post("/login", async (request, response) => {
       console.log(sessionId, jwtToken)
       response.cookie("session_id", sessionId, { httpOnly: true, secure: true });
       response.cookie("jwt_token", jwtToken, { httpOnly: true, secure: true });
+      console.log(sessionId, sessionStore)
       response.json({ jwt_token: jwtToken, session_id: sessionId, });
     } else {
       response.status(400).send("Invalid password");
@@ -169,7 +173,7 @@ module.exports = app;
 // // Other API routes...
 
 // API route to get home videos
-app.get("/all", authenticate, async (request, response) => {
+app.get("/all", authenticateToken, async (request, response) => {
   console.log("sa")
   const { search = "" } = request.query;
   const homeSqlQuery = `SELECT * FROM home_videos WHERE title LIKE '%${search}%';`;
