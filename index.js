@@ -76,6 +76,17 @@ function authenticateToken(request, response, next) {
   });
 }
 
+const authenticate = (req, res, next) => {
+  const sessionId = req.headers['session-id'];
+
+  if (!sessionId || !activeSessions[sessionId]) {
+    return res.status(401).json({ error: 'Invalid session' }); // Unauthorized
+  }
+
+  req.user = activeSessions[sessionId]; // Attach user data to the request
+  next();
+};
+
 // Register user
 app.post("/register", async (request, response) => {
   const { username, password } = request.body;
@@ -155,7 +166,7 @@ module.exports = app;
 // // Other API routes...
 
 // API route to get home videos
-app.get("/all", authenticateToken, async (request, response) => {
+app.get("/all", authenticate, async (request, response) => {
   console.log("sa")
   const { search = "" } = request.query;
   const homeSqlQuery = `SELECT * FROM home_videos WHERE title LIKE '%${search}%';`;
