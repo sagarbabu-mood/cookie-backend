@@ -5,15 +5,22 @@ const path = require("path");
 const bcrypt = require("bcrypt");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser"); // Add this line
+const { v4: uuidv4 } = require("uuid"); // Import uuid
 
 const databasePath = path.join(__dirname, "nxtwatch.db");
 
 const app = express();
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:3019', credentials: true, }));
+app.use(cookieParser()); // Add this line
+app.use(express.urlencoded({ extended: true }));
 
 let database = null;
+
+// In-memory store for sessions (for demonstration purposes)
+const sessionStore = {};
 
 const initializeDbAndServer = async () => {
   try {
@@ -33,30 +40,43 @@ const initializeDbAndServer = async () => {
 
 initializeDbAndServer();
 
-// Verify token middleware
-function authenticateToken(request, response, next) {
-  let jwtToken;
-  const authHeader = request.headers["authorization"];
-  if (authHeader !== undefined) {
-    jwtToken = authHeader.split(" ")[1];
-  }
-
-  if (jwtToken === undefined) {
-    response.status(401);
-    response.send("Invalid JWT Token");
-  } else {
-    jwt.verify(jwtToken, "MY_SECRET_TOKEN", async (error, payload) => {
-      if (error) {
-        response.status(401);
-        response.send("Invalid JWT Token");
-      } else {
-        next();
-      }
-    });
-  }
+function generateSessionId() {
+  return uuidv4();
 }
 
-//Register user
+function saveSessionId(username, sessionId) {
+  sessionStore[username] = sessionId;
+}
+
+function checkSessionId(username, sessionId) {
+  return sessionStore[username] === sessionId;
+}
+
+// Verify token middleware
+function authenticateToken(request, response, next) {
+  const jwtToken = request.cookies.jwt_token;
+  const sessionId = request.cookies.session_id;
+  console.log(jwtToken, sessionId)
+  if (!jwtToken || !sessionId) {
+    return response.status(401).send("Invalid session");
+  }
+
+  jwt.verify(jwtToken, "MY_SECRET_TOKEN", async (error, payload) => {
+    if (error) {
+      return response.status(401).send("Invalid JWT Token");
+    }
+
+    const isValidSession = checkSessionId(payload.username, sessionId);
+    if (!isValidSession) {
+      return response.status(401).send("Invalid session");
+    }
+
+    request.user = payload;
+    next();
+  });
+}
+
+// Register user
 app.post("/register", async (request, response) => {
   const { username, password } = request.body;
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -65,49 +85,78 @@ app.post("/register", async (request, response) => {
 
   if (databaseUser === undefined) {
     const createUserQuery = `
-        INSERT INTO user (username, password)
-        VALUES ( ?, ?);
+      INSERT INTO user (username, password)
+      VALUES ( ?, ?);
     `;
 
     await database.run(createUserQuery, [username, hashedPassword]);
     response.send("User created successfully");
   } else {
-    response.status(400);
-    response.send("User already exists");
+    response.status(400).send("User already exists");
   }
 });
 
-//Login API
+// Login API
 app.post("/login", async (request, response) => {
   const { username, password } = request.body;
   const selectUserQuery = `SELECT * FROM user WHERE username = '${username}';`;
   const databaseUser = await database.get(selectUserQuery);
 
   if (databaseUser === undefined) {
-    response.status(400);
-    response.send("Invalid user");
+    response.status(400).send("Invalid user");
   } else {
     const isPasswordMatched = await bcrypt.compare(
       password,
       databaseUser.password
     );
-    if (isPasswordMatched === true) {
-      const payload = {
-        username: username,
-      };
+    if (isPasswordMatched) {
+      const payload = { username };
       const jwtToken = jwt.sign(payload, "MY_SECRET_TOKEN");
-      response.send({ jwt_token: jwtToken });
+
+      // Generate a session ID
+      const sessionId = generateSessionId();
+
+      // Save session ID
+      saveSessionId(username, sessionId);
+
+      // Set session ID and JWT token as cookies
+      console.log(sessionId, jwtToken)
+      response.cookie("session_id", sessionId, { httpOnly: true, secure: true });
+      response.cookie("jwt_token", jwtToken, { httpOnly: true, secure: true });
+      response.json({ jwt_token: jwtToken, session_id: sessionId, });
     } else {
-      response.status(400);
-      response.send("Invalid password");
+      response.status(400).send("Invalid password");
     }
   }
 });
 
 module.exports = app;
 
+// // API route to get home videos
+// app.get("/all", authenticateToken, async (request, response) => {
+//   const { search = "" } = request.query;
+//   const homeSqlQuery = `SELECT * FROM home_videos WHERE title LIKE '%${search}%';`;
+//   const homeVideos = await database.all(homeSqlQuery);
+//   const data = homeVideos.map((eachVideo) => ({
+//     id: eachVideo.id,
+//     title: eachVideo.title,
+//     view_count: eachVideo.view_count,
+//     published_at: eachVideo.published_at,
+//     thumbnail_url: eachVideo.thumbnail_url,
+//     channel: {
+//       name: eachVideo.channel_name,
+//       profile_image_url: eachVideo.channel_profile_image_url,
+//     },
+//   }));
+
+//   response.send({ videos: data });
+// });
+
+// // Other API routes...
+
 // API route to get home videos
 app.get("/all", authenticateToken, async (request, response) => {
+  console.log("sa")
   const { search = "" } = request.query;
   const homeSqlQuery = `SELECT * FROM home_videos WHERE title LIKE '%${search}%';`;
   const homeVideos = await database.all(homeSqlQuery);
