@@ -76,6 +76,9 @@ function authenticateToken(request, response, next) {
   });
 }
 
+const activeSessions = {}; // This should be replaced with a real session store
+
+
 const authenticate = (req, res, next) => {
   const sessionId = req.headers['session-id'];
 
