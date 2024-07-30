@@ -143,8 +143,8 @@ app.post("/login", async (request, response) => {
 
       // Set session ID and JWT token as cookies
       console.log(sessionId, jwtToken)
-      response.cookie("session_id", sessionId, { httpOnly: true, secure: true });
-      response.cookie("jwt_token", jwtToken, { httpOnly: true, secure: true });
+      response.cookie("session_id", sessionId, { httpOnly: true, });
+      response.cookie("jwt_token", jwtToken, { httpOnly: true, });
       console.log(sessionId, sessionStore)
       response.json({ jwt_token: jwtToken, session_id: sessionId, });
     } else {
