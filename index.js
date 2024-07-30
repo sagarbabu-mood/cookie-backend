@@ -13,9 +13,14 @@ const databasePath = path.join(__dirname, "nxtwatch.db");
 const app = express();
 
 app.use(express.json());
-app.use(cors({ origin: 'https://cookie-frontend.onrender.com', credentials: true, }));
+app.use(cors({
+  origin: (origin, callback) => {
+    callback(null, true);  // Allow all origins
+  }, credentials: true,
+}));
 app.use(cookieParser()); // Add this line
 app.use(express.urlencoded({ extended: true }));
+app.options('*', cors());
 
 let database = null;
 
