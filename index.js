@@ -14,7 +14,7 @@ const app = express();
 
 app.use(express.json());
 app.use(cors({
-  origin: 'http://localhost:3000', // or your frontend URL when deployed
+  origin: 'https://cookie-frontend.onrender.com', // or your frontend URL when deployed
   credentials: true,
 }));
 app.use(cookieParser()); // Add this line
