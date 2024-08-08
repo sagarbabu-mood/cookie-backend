@@ -14,7 +14,7 @@ const app = express();
 
 app.use(express.json());
 app.use(cors({
-  origin: 'https://cookie-frontend.onrender.com', // or your frontend URL when deployed
+  origin: 'https://cookies-frontend.onrender.com', // or your frontend URL when deployed
   credentials: true,
 }));
 app.use(cookieParser()); // Add this line
