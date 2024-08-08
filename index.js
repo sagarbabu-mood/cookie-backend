@@ -14,9 +14,8 @@ const app = express();
 
 app.use(express.json());
 app.use(cors({
-  origin: (origin, callback) => {
-    callback(null, true);  // Allow all origins
-  }, credentials: true,
+  origin: 'http://localhost:3000', // or your frontend URL when deployed
+  credentials: true,
 }));
 app.use(cookieParser()); // Add this line
 app.use(express.urlencoded({ extended: true }));
@@ -143,8 +142,8 @@ app.post("/login", async (request, response) => {
 
       // Set session ID and JWT token as cookies
       console.log(sessionId, jwtToken)
-      response.cookie("session_id", sessionId, { httpOnly: true, });
-      response.cookie("jwt_token", jwtToken, { httpOnly: true, });
+      response.cookie("session_id", sessionId, { httpOnly: true, secure: true, domain: '.onrender.com', sameSite: 'None' });
+      response.cookie("jwt_tokensss", jwtToken, { httpOnly: true, secure: true, domain: '.onrender.com', sameSite: 'None' });
       console.log(sessionId, sessionStore)
       response.json({ jwt_token: jwtToken, session_id: sessionId, });
     } else {
